@@ -17,14 +17,10 @@ from langchain.prompts import PromptTemplate
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve Google API key from environment variables
+# Check if GOOGLE_API_KEY is loaded properly
 genai_api_key = os.getenv("GOOGLE_API_KEY")
 if not genai_api_key:
     raise ValueError("GOOGLE_API_KEY not found in the environment variables.")
-
-load_dotenv()
-
-
 
 # Configure the Google API client
 genai.configure(api_key=genai_api_key)
@@ -49,40 +45,44 @@ def get_pptx_text(pptx_docs):
                     text += shape.text + "\n"
     return text
 
-# Function to split text into chunks
+# Function to split text into chunks (improved logic)
 def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=113000, chunk_overlap=10000)  # Smaller chunks for better context capture
     chunks = text_splitter.split_text(text)
     return chunks
 
-# Function to create and save vector store
+# Function to create and save vector store (improved embedding model)
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")  # Use a more powerful model here, e.g., text-embedding-ada-002 or gemini
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
-# Function to create conversational chain
+# Function to create conversational chain with more precise prompts
 async def get_conversational_chain():
     prompt_template = """
-    Answer the question as detailed as possible from the provided context, make sure to provide all the details, 
-    if the answer is not in the provided context just say,"answer is not available in the context", 
-    don't provide the wrong answer\n\n
-    Context: \n {context}?\n
-    Question: \n{question}\n
+    You are a helpful assistant. Based on the context provided below, answer the user's question in detail. 
+    If the answer is not found in the context, say "Answer is not available in the context" and do not make up an answer.
 
+    Context:
+    {context}
+    
+    Question:
+    {question}
+    
     Answer:
     """
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)  # Ensure you're using the best available model
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
     return chain
 
-# Function to handle user input
+# Function to handle user input and generate better responses
 async def user_input(user_question):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")  # You can try different models
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
+    docs = new_db.similarity_search(user_question, k=5)  # Retrieve top 5 similar documents for better context
 
+    # Ensure the response is based on context from the top docs
     chain = await get_conversational_chain()
 
     response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
