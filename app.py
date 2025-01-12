@@ -9,7 +9,7 @@ import asyncio
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
@@ -21,6 +21,10 @@ load_dotenv()
 genai_api_key = os.getenv("GOOGLE_API_KEY")
 if not genai_api_key:
     raise ValueError("GOOGLE_API_KEY not found in the environment variables.")
+
+load_dotenv()
+
+
 
 # Configure the Google API client
 genai.configure(api_key=genai_api_key)
