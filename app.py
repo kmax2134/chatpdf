@@ -3,6 +3,7 @@ from PyPDF2 import PdfReader
 from pptx import Presentation
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
+from dotenv import load_dotenv
 import asyncio
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -12,10 +13,16 @@ from langchain.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
-from dotenv import load_dotenv
 
-# For Streamlit Deployement Load environment variables
-genai_api_key = st.secrets["GOOGLE_API_KEY"]
+# Load environment variables from .env file
+load_dotenv()
+
+# Retrieve Google API key from environment variables
+genai_api_key = os.getenv("GOOGLE_API_KEY")
+if not genai_api_key:
+    raise ValueError("GOOGLE_API_KEY not found in the environment variables.")
+
+# Configure the Google API client
 genai.configure(api_key=genai_api_key)
 
 # Function to extract text from PDF files
